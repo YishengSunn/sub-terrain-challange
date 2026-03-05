@@ -3,9 +3,6 @@ log/
 build/
 install/
 
-# Ignore all zip files
-*.zip
-
 # Python
 __pycache__/
 *.pyc
