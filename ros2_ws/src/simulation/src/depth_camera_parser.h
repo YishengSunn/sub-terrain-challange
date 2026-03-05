@@ -6,7 +6,7 @@
 
 class DepthCameraParser : public RGBCameraParser {
 public:
-  DepthCameraParser() = default;
+  DepthCameraParser(rclcpp::Node::SharedPtr node) : RGBCameraParser(node) {}
 
 protected: 
 

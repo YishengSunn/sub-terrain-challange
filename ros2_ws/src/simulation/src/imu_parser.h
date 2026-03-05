@@ -8,8 +8,8 @@
 
 class IMUParser : public UnityStreamParser {
 public:
-  IMUParser() {
-    node_ = rclcpp::Node::make_shared("imu_parser");
+  IMUParser(rclcpp::Node::SharedPtr node) {
+    node_ = node;
   }
 
   virtual bool ParseMessage(const UnityHeader& header, 

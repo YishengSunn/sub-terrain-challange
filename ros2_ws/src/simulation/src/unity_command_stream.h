@@ -7,8 +7,8 @@
 
 class UnityCommandStream {
 public:
-  UnityCommandStream(std::string host, std::string port) {
-    node_ = rclcpp::Node::make_shared("unity_command_stream");
+  UnityCommandStream(rclcpp::Node::SharedPtr node, std::string host, std::string port) {
+    node_ = node;
     command_sub_ = node_->create_subscription<std_msgs::msg::String>(
       "command_topic", 100, 
       std::bind(&UnityCommandStream::CommandCallback, this, std::placeholders::_1));

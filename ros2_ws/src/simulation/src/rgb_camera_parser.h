@@ -13,8 +13,8 @@
 
 class RGBCameraParser : public UnityStreamParser {
 public:
-  RGBCameraParser() {
-    node_ = rclcpp::Node::make_shared("rgb_camera_parser");
+  RGBCameraParser(rclcpp::Node::SharedPtr node) {
+    node_ = node;
   }
 
   virtual bool ParseMessage(const UnityHeader& header, 
