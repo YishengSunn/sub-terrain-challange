@@ -67,6 +67,8 @@ Then make the Unity simulation binary executable:
 chmod +x install/simulation/lib/simulation/Simulation.x86_64
 ```
 
+---
+
 ## Running the Simulation
 
 After building and sourcing the workspace, run the simulation using the provided launch files.
