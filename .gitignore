@@ -1,4 +1,21 @@
+# Ignore the build and install directories
+log/
 build/
 install/
-log/
-Simulation/
+
+# Ignore all zip files
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# System
+.DS_Store
+
+commands.txt
+rosgraph.png
