@@ -8,21 +8,20 @@
 
 #include <geometry_msgs/msg/transform.hpp>
 #include <geometry_msgs/msg/twist.hpp>
+#include <geometry_msgs/msg/point_stamped.hpp>
+
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <trajectory_publisher/polynomial_trajectory.hpp>
 
-#include <thread>
-
-class TrajectoryPublisher : public rclcpp::Node
-{
+class TrajectoryPublisher : public rclcpp::Node {
 public:
     TrajectoryPublisher();
 
 private:
     void publishTrajectory();
     void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
-    void keyboardLoop();
+    void targetCallback(const geometry_msgs::msg::PointStamped::SharedPtr msg);
 
     rclcpp::Publisher<
         trajectory_msgs::msg::MultiDOFJointTrajectory>::SharedPtr publisher_;
@@ -30,9 +29,10 @@ private:
     rclcpp::Subscription<
         nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 
-    rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::Subscription<
+        geometry_msgs::msg::PointStamped>::SharedPtr target_sub_;
 
-    std::thread keyboard_thread_;
+    rclcpp::TimerBase::SharedPtr timer_;
 
     bool initialized_;
 
