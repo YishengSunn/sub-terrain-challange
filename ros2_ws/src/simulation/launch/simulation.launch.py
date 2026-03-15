@@ -105,6 +105,22 @@ def generate_launch_description():
         remappings=[("/current_state", "/current_state_est")],
     )
 
+    # Target manager node
+    target_manager_node = Node(
+        package="target_manager",
+        executable="target_manager_node",
+        name="target_manager",
+        output="screen",
+    )
+
+    # Trajectory publisher node
+    trajectory_publisher_node = Node(
+        package="trajectory_publisher",
+        executable="trajectory_publisher_node",
+        name="trajectory_publisher",
+        output="screen",
+    )
+
     # Static TF publishers (ROS2 CLI style args; verify for your ROS2 distro)
     static_tf_nodes = [
         Node(
@@ -160,6 +176,8 @@ def generate_launch_description():
             state_estimate_corruptor_disabled,
             w_to_unity,
             controller_node,
+            target_manager_node,
+            trajectory_publisher_node,
             *static_tf_nodes,
         ]
     )
