@@ -16,6 +16,7 @@ private:
   double distanceToTarget(const geometry_msgs::msg::Point & target);
   void publishCurrentTarget();
   void timerCallback();
+  void enterMissionComplete();
 
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr target_pub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr pose_sub_;
@@ -26,6 +27,17 @@ private:
 
   geometry_msgs::msg::Pose current_pose_;
   bool has_pose_;
-  bool target_sent_;
+
+  enum class State {
+    WAIT_FOR_POSE,
+    NAVIGATE,
+    DONE
+  };
+
+  State state_;
+
+  rclcpp::Time last_target_pub_time_;
+  double target_pub_interval_;
+  double first_publish_delay_sec_;
   double reach_threshold_;
 };
