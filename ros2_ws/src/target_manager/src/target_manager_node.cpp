@@ -4,10 +4,17 @@ TargetManager::TargetManager()
 : Node("target_manager"),
   current_target_index_(0),
   has_pose_(false),
-  target_sent_(false) {
+  state_(State::WAIT_FOR_POSE),
+  last_target_pub_time_(rclcpp::Time(0)),
+  target_pub_interval_(10.0),
+  first_publish_delay_sec_(5.0) {
 
     this->declare_parameter("reach_threshold", 0.3);
+    this->declare_parameter("target_pub_interval", 10.0);
+    this->declare_parameter("first_publish_delay_sec", 5.0);
     this->get_parameter("reach_threshold", reach_threshold_);
+    this->get_parameter("target_pub_interval", target_pub_interval_);
+    this->get_parameter("first_publish_delay_sec", first_publish_delay_sec_);
 
     target_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>("/target_position", 10);
 
@@ -24,6 +31,17 @@ TargetManager::TargetManager()
 
     RCLCPP_INFO(this->get_logger(), "Target Manager started.");
     RCLCPP_INFO(this->get_logger(), "Total targets: %ld", targets_.size());
+}
+
+void TargetManager::enterMissionComplete() {
+    if (state_ == State::DONE) {
+        return;
+    }
+    state_ = State::DONE;
+    RCLCPP_INFO(this->get_logger(), "Mission complete.");
+    if (timer_) {
+        timer_->cancel();
+    }
 }
 
 void TargetManager::initTargets() {
@@ -77,31 +95,65 @@ void TargetManager::publishCurrentTarget() {
 
 void TargetManager::timerCallback() {
 
-    if (current_target_index_ >= targets_.size()) {
-        return;
-    }
+    switch (state_) {
+        case State::WAIT_FOR_POSE: {
+            if (!has_pose_) {
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                                    "Waiting for current pose...");
+                return;
+            }
 
-    if (!has_pose_) {
-        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                             "Waiting for current pose...");
-        return;
-    }
+            RCLCPP_INFO(this->get_logger(), "Got pose → NAVIGATE");
+            state_ = State::NAVIGATE;
+            break;
+        }
 
-    if (!target_sent_) {
-        publishCurrentTarget();
-        target_sent_ = true;
-    }
+        case State::NAVIGATE: {
+            if (current_target_index_ >= targets_.size()) {
+                enterMissionComplete();
+                return;
+            }
 
-    double dist = distanceToTarget(targets_[current_target_index_]);
+            rclcpp::Time now = this->now();
 
-    if (dist < reach_threshold_) {
-        RCLCPP_INFO(
-            this->get_logger(),
-            "Reached target (dist=%.3f).",
-            dist);
+            if (last_target_pub_time_.nanoseconds() == 0) {
+                if (now.seconds() > first_publish_delay_sec_) {
+                    publishCurrentTarget();
+                    last_target_pub_time_ = now;
+                }
+            }
+            
+            else {
+                if ((now - last_target_pub_time_).seconds() > target_pub_interval_) {
+                    publishCurrentTarget();
+                    last_target_pub_time_ = now;
+                }
+            }
 
-        current_target_index_++;
-        target_sent_ = false;
+            {
+                double dist = distanceToTarget(targets_[current_target_index_]);
+
+                RCLCPP_INFO_THROTTLE(
+                    this->get_logger(), *this->get_clock(), 1000,
+                    "Distance to target: %.2f", dist);
+
+                if (dist < reach_threshold_) {
+                    RCLCPP_INFO(
+                        this->get_logger(),
+                        "Reached target (dist=%.3f)", dist);
+
+                    current_target_index_++;
+                    if (current_target_index_ >= targets_.size()) {
+                        enterMissionComplete();
+                        return;
+                    }
+                }
+            }
+            break;
+        }
+
+        case State::DONE:
+            break;
     }
 }
 
