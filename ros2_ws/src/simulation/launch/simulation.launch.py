@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -121,6 +121,11 @@ def generate_launch_description():
         output="screen",
     )
 
+    delayed_nodes = TimerAction(
+        period=5.0,
+        actions=[trajectory_publisher_node, target_manager_node]
+    )
+
     # Static TF publishers (ROS2 CLI style args; verify for your ROS2 distro)
     static_tf_nodes = [
         Node(
@@ -176,8 +181,7 @@ def generate_launch_description():
             state_estimate_corruptor_disabled,
             w_to_unity,
             controller_node,
-            target_manager_node,
-            trajectory_publisher_node,
+            delayed_nodes,
             *static_tf_nodes,
         ]
     )
