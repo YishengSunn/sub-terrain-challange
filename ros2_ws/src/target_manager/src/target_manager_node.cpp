@@ -7,16 +7,22 @@ TargetManager::TargetManager()
   state_(State::WAIT_FOR_POSE),
   last_target_pub_time_(rclcpp::Time(0)),
   target_pub_interval_(10.0),
-  first_publish_delay_sec_(5.0) {
+  first_publish_delay_sec_(5.0),
+  enable_exploration_(true),
+  cave_entrance_target_index_(0) {
 
     this->declare_parameter("reach_threshold", 0.3);
     this->declare_parameter("target_pub_interval", 10.0);
     this->declare_parameter("first_publish_delay_sec", 5.0);
+    this->declare_parameter("enable_exploration", true);
+    this->declare_parameter("cave_entrance_target_index", 0);
     this->get_parameter("reach_threshold", reach_threshold_);
     this->get_parameter("target_pub_interval", target_pub_interval_);
     this->get_parameter("first_publish_delay_sec", first_publish_delay_sec_);
+    this->get_parameter("enable_exploration", enable_exploration_);
 
     target_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>("/target_position", 10);
+    exploration_mode_pub_ = this->create_publisher<std_msgs::msg::Bool>("/exploration_mode", rclcpp::QoS(10).transient_local());
 
     pose_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
         "/current_state_est",
@@ -29,8 +35,36 @@ TargetManager::TargetManager()
 
     initTargets();
 
+    int cave_idx = 0;
+    this->get_parameter("cave_entrance_target_index", cave_idx);
+
+    if (targets_.empty()) {
+        cave_entrance_target_index_ = 0;
+        enable_exploration_ = false;
+        RCLCPP_WARN(this->get_logger(), "No targets; exploration disabled.");
+    }
+
+    else {
+        if (cave_idx < 0) {
+            cave_idx = 0;
+        }
+        if (static_cast<size_t>(cave_idx) >= targets_.size()) {
+            RCLCPP_WARN(
+                this->get_logger(),
+                "cave_entrance_target_index %d out of range, using last target index %zu",
+                cave_idx, targets_.size() - 1);
+            cave_idx = static_cast<int>(targets_.size() - 1);
+        }
+        cave_entrance_target_index_ = static_cast<size_t>(cave_idx);
+    }
+
     RCLCPP_INFO(this->get_logger(), "Target Manager started.");
     RCLCPP_INFO(this->get_logger(), "Total targets: %ld", targets_.size());
+    RCLCPP_INFO(
+        this->get_logger(),
+        "Exploration after target index %zu (enable=%s)",
+        cave_entrance_target_index_,
+        enable_exploration_ ? "true" : "false");
 }
 
 void TargetManager::enterMissionComplete() {
@@ -42,6 +76,19 @@ void TargetManager::enterMissionComplete() {
     if (timer_) {
         timer_->cancel();
     }
+}
+
+void TargetManager::enterExplorationMode() {
+    if (state_ == State::EXPLORE) {
+        return;
+    }
+    state_ = State::EXPLORE;
+    std_msgs::msg::Bool msg;
+    msg.data = true;
+    exploration_mode_pub_->publish(msg);
+    RCLCPP_INFO(
+        this->get_logger(),
+        "Reached cave entrance → autonomous exploration mode (/exploration_mode=true)");
 }
 
 void TargetManager::initTargets() {
@@ -142,6 +189,12 @@ void TargetManager::timerCallback() {
                         this->get_logger(),
                         "Reached target (dist=%.3f)", dist);
 
+                    if (enable_exploration_ &&
+                        current_target_index_ == cave_entrance_target_index_) {
+                        enterExplorationMode();
+                        return;
+                    }
+
                     current_target_index_++;
                     if (current_target_index_ >= targets_.size()) {
                         enterMissionComplete();
@@ -149,6 +202,13 @@ void TargetManager::timerCallback() {
                     }
                 }
             }
+            break;
+        }
+
+        case State::EXPLORE: {
+            RCLCPP_INFO_THROTTLE(
+                this->get_logger(), *this->get_clock(), 5000,
+                "Autonomous exploration active.");
             break;
         }
 
