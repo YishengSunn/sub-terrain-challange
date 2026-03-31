@@ -96,7 +96,10 @@ void TrajectoryPublisher::publishTrajectory() {
     transform.translation.y = target_y_;
     transform.translation.z = target_z_;
 
-    transform.rotation.w = 1.0;
+    transform.rotation.x = 0.0;
+    transform.rotation.y = 0.0;
+    transform.rotation.z = 1.0;
+    transform.rotation.w = 0.0;
 
     geometry_msgs::msg::Twist vel;
     geometry_msgs::msg::Twist acc;
