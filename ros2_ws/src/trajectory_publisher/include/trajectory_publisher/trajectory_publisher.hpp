@@ -36,6 +36,10 @@ private:
 
     bool initialized_;
 
+    double odom_x_;
+    double odom_y_;
+    double odom_z_;
+
     double target_x_;
     double target_y_;
     double target_z_;

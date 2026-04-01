@@ -1,8 +1,13 @@
 #include <trajectory_publisher/trajectory_publisher.hpp>
 
 TrajectoryPublisher::TrajectoryPublisher()
-: Node("trajectory_publisher"), initialized_(false), traj_running_(false) {
-
+: Node("trajectory_publisher"),
+  initialized_(false),
+  odom_x_(0.0),
+  odom_y_(0.0),
+  odom_z_(0.0),
+  traj_running_(false),
+  traj_duration_(2.0) {
     publisher_ = this->create_publisher<
         trajectory_msgs::msg::MultiDOFJointTrajectory>(
         "/command/trajectory", 10);
@@ -27,10 +32,14 @@ TrajectoryPublisher::TrajectoryPublisher()
 void TrajectoryPublisher::odomCallback(
     const nav_msgs::msg::Odometry::SharedPtr msg) {
 
+    odom_x_ = msg->pose.pose.position.x;
+    odom_y_ = msg->pose.pose.position.y;
+    odom_z_ = msg->pose.pose.position.z;
+
     if (!initialized_) {
-        target_x_ = msg->pose.pose.position.x;
-        target_y_ = msg->pose.pose.position.y;
-        target_z_ = msg->pose.pose.position.z;
+        target_x_ = odom_x_;
+        target_y_ = odom_y_;
+        target_z_ = odom_z_;
 
         initialized_ = true;
 
@@ -50,11 +59,9 @@ void TrajectoryPublisher::targetCallback(
     double goal_y = msg->point.y;
     double goal_z = msg->point.z;
 
-    traj_duration_ = 5.0;
-
-    traj_x_.setTrajectory(target_x_, goal_x, traj_duration_);
-    traj_y_.setTrajectory(target_y_, goal_y, traj_duration_);
-    traj_z_.setTrajectory(target_z_, goal_z, traj_duration_);
+    traj_x_.setTrajectory(odom_x_, goal_x, traj_duration_);
+    traj_y_.setTrajectory(odom_y_, goal_y, traj_duration_);
+    traj_z_.setTrajectory(odom_z_, goal_z, traj_duration_);
 
     traj_start_time_ = this->now();
     traj_running_ = true;
