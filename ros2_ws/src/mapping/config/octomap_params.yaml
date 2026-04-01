@@ -1,0 +1,13 @@
+octomap_server:
+  ros__parameters:
+    frame_id: "world"
+    resolution: 1.0                # Large resolution for stability (Sync with TUM ROS1)
+    
+    height_map: false              
+    colored_map: true              
+    
+    sensor_model:
+      max_range: 50.0               # High range to scan entire cave (Sync with TUM ROS1)
+      
+    occupancy_min_z: -5.0
+    occupancy_max_z: 30.0

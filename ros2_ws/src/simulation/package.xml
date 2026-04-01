@@ -17,11 +17,13 @@
   <depend>sensor_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>cv_bridge</depend>
-  <exec_depend>depth_image_proc</exec_depend>
-  <exec_depend>octomap_server</exec_depend>
+  <exec_depend>mapping</exec_depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>mav_msgs</depend>
+
+  <exec_depend>mission_state_machine</exec_depend>
+  <exec_depend>target_manager</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

@@ -1,12 +1,14 @@
 #pragma once
-#include <cmath>
-#include <cstddef>
+
+#include <cstdint>
+#include <limits>
 #include <memory>
 #include <vector>
-#include "rclcpp/rclcpp.hpp"
-#include "geometry_msgs/msg/point_stamped.hpp"
-#include "nav_msgs/msg/odometry.hpp"
-#include "std_msgs/msg/bool.hpp"
+
+#include <geometry_msgs/msg/point_stamped.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/u_int32.hpp>
+
 
 class TargetManager : public rclcpp::Node {
 public:
@@ -14,37 +16,19 @@ public:
 
 private:
   void initTargets();
-  void poseCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
-  double distanceToTarget(const geometry_msgs::msg::Point & target);
+  void indexCallback(const std_msgs::msg::UInt32::SharedPtr msg);
   void publishCurrentTarget();
   void timerCallback();
-  void enterMissionComplete();
-  void enterExplorationMode();
 
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr target_pub_;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr exploration_mode_pub_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr pose_sub_;
+  rclcpp::Subscription<std_msgs::msg::UInt32>::SharedPtr mission_target_index_sub_;
   rclcpp::TimerBase::SharedPtr timer_;
 
   std::vector<geometry_msgs::msg::Point> targets_;
-  size_t current_target_index_;
-
-  geometry_msgs::msg::Pose current_pose_;
-  bool has_pose_;
-
-  enum class State {
-    WAIT_FOR_POSE,
-    NAVIGATE,
-    EXPLORE,
-    DONE
-  };
-
-  State state_;
+  uint32_t mission_target_index_;
+  uint32_t last_seen_mission_target_index_;
 
   rclcpp::Time last_target_pub_time_;
   double target_pub_interval_;
   double first_publish_delay_sec_;
-  double reach_threshold_;
-  bool enable_exploration_;
-  size_t cave_entrance_target_index_;
 };

@@ -4,7 +4,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.substitutions import PathJoinSubstitution
@@ -113,7 +113,13 @@ def generate_launch_description():
         remappings=[("/current_state", "/current_state_est")],
     )
 
-    # Target manager node
+    mission_state_machine_node = Node(
+        package="mission_state_machine",
+        executable="mission_state_machine_node",
+        name="mission_state_machine",
+        output="screen",
+    )
+
     target_manager_node = Node(
         package="target_manager",
         executable="target_manager_node",
@@ -131,42 +137,21 @@ def generate_launch_description():
 
     delayed_nodes = TimerAction(
         period=5.0,
-        actions=[trajectory_publisher_node, target_manager_node]
+        actions=[trajectory_publisher_node, mission_state_machine_node, target_manager_node]
     )
 
-    # Depth point cloud node
-    depth_point_cloud_xyz_node = Node(
-        package="depth_image_proc",
-        executable="point_cloud_xyz_node",
-        name="depth_point_cloud_xyz",
-        output="screen",
-        remappings=[
-            ("image_rect", depth_image_topic),
-            ("camera_info", depth_info_topic),
-            ("points", octomap_cloud_topic),
-        ],
-        condition=IfCondition(enable_depth_cloud),
-    )
-
-    # Octomap launch
-    octomap_launch = IncludeLaunchDescription(
+    mapping_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [FindPackageShare("simulation"), "launch", "octomap.launch.py"]
-            )
+            PathJoinSubstitution([FindPackageShare("mapping"), "launch", "mapping.launch.py"])
         ),
         launch_arguments={
-            "cloud_topic": octomap_cloud_topic,
+            "depth_image_topic": depth_image_topic,
+            "depth_info_topic": depth_info_topic,
+            "enable_depth_cloud": enable_depth_cloud,
+            "enable_octomap": enable_octomap,
+            "octomap_cloud_topic": octomap_cloud_topic,
             "use_sim_time": use_sim_time,
         }.items(),
-        condition=IfCondition(
-            PythonExpression(
-                [
-                    "'", enable_octomap, "' == 'true' and '",
-                    enable_depth_cloud, "' == 'true'",
-                ]
-            )
-        ),
     )
 
     # Static TF publishers (ROS2 CLI style args; verify for your ROS2 distro)
@@ -237,7 +222,6 @@ def generate_launch_description():
             controller_node,
             delayed_nodes,
             *static_tf_nodes,
-            depth_point_cloud_xyz_node,
-            octomap_launch,
+            mapping_launch,
         ]
     )

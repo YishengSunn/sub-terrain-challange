@@ -1,17 +1,17 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>target_manager</name>
-  <version>0.0.0</version>
-  <description>Publishes /target_position from /mission/target_index (waypoints match mission_state_machine).</description>
+  <name>mapping</name>
+  <version>0.0.1</version>
+  <description>Depth to point cloud and octomap_server for 3D occupancy mapping.</description>
   <maintainer email="sunyisheng48@gmail.com">yisheng</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>rclcpp</depend>
-  <depend>geometry_msgs</depend>
-  <depend>std_msgs</depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>depth_image_proc</exec_depend>
+  <exec_depend>octomap_server</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
