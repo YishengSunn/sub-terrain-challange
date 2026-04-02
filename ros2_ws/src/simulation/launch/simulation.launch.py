@@ -4,7 +4,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.substitutions import PathJoinSubstitution
@@ -21,10 +21,9 @@ def generate_launch_description():
     left_info_topic = LaunchConfiguration("left_info_topic")
     depth_image_topic = LaunchConfiguration("depth_image_topic")
     depth_info_topic = LaunchConfiguration("depth_info_topic")
-    enable_depth_cloud = LaunchConfiguration("enable_depth_cloud")
-    enable_octomap = LaunchConfiguration("enable_octomap")
     octomap_cloud_topic = LaunchConfiguration("octomap_cloud_topic")
     use_sim_time = LaunchConfiguration("use_sim_time")
+    rviz_config = LaunchConfiguration("rviz_config")
 
     # Declare args
     declared_args = [
@@ -36,10 +35,14 @@ def generate_launch_description():
         DeclareLaunchArgument("left_info_topic", default_value="/realsense/rgb/left_image_info"),
         DeclareLaunchArgument("depth_image_topic", default_value="/realsense/depth/image"),
         DeclareLaunchArgument("depth_info_topic", default_value="/realsense/depth/camera_info"),
-        DeclareLaunchArgument("enable_depth_cloud", default_value="true"),
-        DeclareLaunchArgument("enable_octomap",default_value="true"),
         DeclareLaunchArgument("octomap_cloud_topic", default_value="/depth_camera/points"),
         DeclareLaunchArgument("use_sim_time", default_value="false"),
+        DeclareLaunchArgument(
+            "rviz_config",
+            default_value=PathJoinSubstitution(
+                [FindPackageShare("mapping"), "rviz", "default.rviz"]
+            ),
+        ),
     ]
 
     # <include file="$(find simulation)/launch/unity_ros.launch"> ...
@@ -73,11 +76,11 @@ def generate_launch_description():
         name="state_estimate_corruptor",
         output="screen",
         parameters=[
-            # drift_rw_factor
+            # Drift_rw_factor
             {"drift_rw_factor": 0.03},
-            # pos_white_sig
+            # Pos_white_sig
             {"pos_white_sig": 0.005},
-            # jump_seconds
+            # Jump_seconds
             {"jump_seconds": 20.0},
         ],
         condition=IfCondition(corrupt_state_estimate),
@@ -137,7 +140,7 @@ def generate_launch_description():
 
     delayed_nodes = TimerAction(
         period=5.0,
-        actions=[trajectory_publisher_node, mission_state_machine_node, target_manager_node]
+        actions=[trajectory_publisher_node, mission_state_machine_node, target_manager_node],
     )
 
     mapping_launch = IncludeLaunchDescription(
@@ -145,13 +148,47 @@ def generate_launch_description():
             PathJoinSubstitution([FindPackageShare("mapping"), "launch", "mapping.launch.py"])
         ),
         launch_arguments={
+            "color_image_topic": left_image_topic,
+            "color_info_topic": left_info_topic,
             "depth_image_topic": depth_image_topic,
             "depth_info_topic": depth_info_topic,
-            "enable_depth_cloud": enable_depth_cloud,
-            "enable_octomap": enable_octomap,
             "octomap_cloud_topic": octomap_cloud_topic,
             "use_sim_time": use_sim_time,
         }.items(),
+    )
+
+    rviz_octomap_sim_time = Node(
+        package="mapping",
+        executable="rviz2_with_octomap.sh",
+        name="rviz2",
+        output="screen",
+        arguments=[
+            "-d", rviz_config,
+            "--ros-args", "-p",
+            "use_sim_time:=true",
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                ["'", use_sim_time, "' == 'true'"]
+            )
+        ),
+    )
+
+    rviz_octomap_wall_time = Node(
+        package="mapping",
+        executable="rviz2_with_octomap.sh",
+        name="rviz2",
+        output="screen",
+        arguments=[
+            "-d", rviz_config,
+            "--ros-args", "-p",
+            "use_sim_time:=false",
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                ["'", use_sim_time, "' != 'true'"]
+            )
+        ),
     )
 
     # Static TF publishers (ROS2 CLI style args; verify for your ROS2 distro)
@@ -168,6 +205,17 @@ def generate_launch_description():
             executable="static_transform_publisher",
             name="sim_rgb_camera",
             arguments=["0", "-0.05", "0", "0", "0", "0", "/camera", "/Quadrotor/RGBCameraLeft"],
+            output="screen",
+        ),
+        Node(
+            package="tf2_ros",
+            executable="static_transform_publisher",
+            name="sim_rgb_camera_to_rgb_camera",
+            arguments=[
+                "0", "0", "0", "0", "0", "0",
+                "/Quadrotor/RGBCameraLeft",
+                "Quadrotor/Sensors/RGBCameraLeft"
+            ],
             output="screen",
         ),
         Node(
@@ -223,5 +271,7 @@ def generate_launch_description():
             delayed_nodes,
             *static_tf_nodes,
             mapping_launch,
+            rviz_octomap_sim_time,
+            rviz_octomap_wall_time,
         ]
     )

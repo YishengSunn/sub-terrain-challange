@@ -18,6 +18,7 @@
   <depend>nav_msgs</depend>
   <depend>cv_bridge</depend>
   <exec_depend>mapping</exec_depend>
+  <exec_depend>rviz2</exec_depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>mav_msgs</depend>
