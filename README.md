@@ -37,7 +37,16 @@ sudo apt update
 sudo apt install colcon cmake ros-dev-tools
 ```
 
-### 3. Build the Workspace
+### 3. Install Required ROS Packages
+
+Install additional ROS packages used by this workspace:
+
+```bash
+sudo apt install ros-$ROS_DISTRO-depth-image-proc
+sudo apt install ros-jazzy-octomap-server ros-jazzy-octomap-msgs ros-jazzy-octomap-rviz-plugins
+```
+
+### 4. Build the Workspace
 
 Navigate to the ROS2 workspace:
 
@@ -57,7 +66,7 @@ After building, source the workspace:
 source install/setup.bash
 ```
 
-### 4. Setup Simulation Executable
+### 5. Setup Simulation Executable
 
 Unpack `simulation.zip` and move the extracted files to `sub-terrain-challange/ros2_ws/install/simulation/lib/simulation`:
 
@@ -71,7 +80,19 @@ chmod +x install/simulation/lib/simulation/Simulation.x86_64
 
 ## Running the Simulation
 
-After building and sourcing the workspace, run the simulation using the provided launch files.
+After building the workspace, start the simulation using the provided bash script.
+
+```bash
+bash ros2_ws/src/mapping/scripts/start_simulation_with_rviz.sh
+```
+
+If you get a permission error, make the script executable once:
+
+```bash
+chmod +x ros2_ws/src/mapping/scripts/start_simulation_with_rviz.sh
+```
+
+If you prefer to launch manually (after sourcing `ros2_ws/install/setup.bash`), you can still run:
 
 ```bash
 ros2 launch simulation simulation.launch.py
